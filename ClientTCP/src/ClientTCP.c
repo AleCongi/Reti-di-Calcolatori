@@ -22,6 +22,7 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #define PROTOPORT 27015 // default protocol port number
 #define QLEN 6 // size of request queue
 
@@ -34,11 +35,28 @@ void clearwinsock() {
 	WSACleanup();
 #endif
 }
+void removeExtraSpaces(char *str) {
+	int i, x;
+	for (i = x = 0; str[i]; ++i)
+		if (!isspace(str[i]) || ((i > 0) && !isspace(str[i - 1]))) {
+			str[x++] = str[i];
+		}
+	str[x] = '\0';
+}
 
-typedef struct{
-	char stringa[10];
-	int numero;
-} messaggio;
+char* removeLeadingSpaces(char *str) {
+	static char str1[150];
+	int count = 0, j, k;
+	while (str[count] == ' ') {
+		count++;
+	}
+	for (j = count, k = 0; str[j] != '\0'; j++, k++) {
+		str1[k] = str[j];
+	}
+	str1[k] = '\0';
+	removeExtraSpaces(str1);
+	return str1;
+}
 
 int main(int argc, char *argv[]) {
 	int port;
@@ -83,15 +101,28 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
-	messaggio ciao;
-	ciao.numero = 1998;
-	strcpy(ciao.stringa, "DIO");
+	char input[150];
+	char *rmvSpace;
 
-	if (send (c_socket, (char *)&ciao, sizeof(messaggio), 0) < 0){
-		errorhandler("Failed to send.\n");
+	while (1) {
+		gets(input);
+		rmvSpace = removeLeadingSpaces(input);
+		if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
+			send(c_socket, rmvSpace, sizeof(char[150]), 0);
+			closesocket(c_socket);
+			clearwinsock();
+			return (0);
+		} else {
+			if (send(c_socket, rmvSpace, sizeof(char[150]), 0) < 0) {
+				errorhandler("Failed to send.\n");
 				closesocket(c_socket);
 				clearwinsock();
 				return -1;
+			}
+			//RISULTATO
+		}
+		memset(input, 0, sizeof(input));
+		memset(rmvSpace, 0, sizeof(char[150]));
 	}
 
 	// CHIUSURA DELLA CONNESSIONE

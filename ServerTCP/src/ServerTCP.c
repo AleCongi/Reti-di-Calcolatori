@@ -22,6 +22,7 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #define PROTOPORT 27015 // default protocol port number
 #define QLEN 6 // size of request queue
 
@@ -34,11 +35,6 @@ void clearwinsock() {
 	WSACleanup();
 #endif
 }
-
-typedef struct{
-	char stringa[10];
-	int numero;
-} messaggio;
 
 int main(int argc, char *argv[]) {
 	int port;
@@ -86,33 +82,96 @@ int main(int argc, char *argv[]) {
 		errorhandler("listen() failed.\n");
 		closesocket(my_socket);
 		clearwinsock();
+		system("pause");
 		return -1;
 	}
 	// ACCETTARE UNA NUOVA CONNESSIONE
 	struct sockaddr_in cad; // structure for the client address
 	int client_socket; // socket descriptor for the client
 	int client_len; // the size of the client address
-	printf("Waiting for a client to connect...");
-	while (1) { /* oppure for (;;) */
-		client_len = sizeof(cad); // set the size of the client address
+	client_len = sizeof(cad); // set the size of the client address
+	char input[150];
+	int clientHandler = 0;
+	char operator;
+	char first[75];
+	char second[75];
+	int i = 0;
+	int j = 0;
+
+	while (1) {
+		printf("Waiting for a client to connect...");
 		if ((client_socket = accept(my_socket, (struct sockaddr*) &cad,
 				&client_len)) < 0) {
 			errorhandler("accept() failed.\n");
 			// CHIUSURA DELLA CONNESSIONE
 			closesocket(client_socket);
 			clearwinsock();
+			system("pause");
 			return 0;
 		}
 		printf("Handling client %s\n", inet_ntoa(cad.sin_addr));
-		messaggio ricevuto;
-		if (recv(client_socket, (char *) &ricevuto, sizeof(messaggio), 0) < 0){
-			errorhandler("receive failed.\n");
-						// CHIUSURA DELLA CONNESSIONE
-						closesocket(client_socket);
-						clearwinsock();
-						return 0;
+		clientHandler = 1;
+		while (clientHandler == 1) {
+			memset(input, 0, sizeof(input));
+			if (recv(client_socket, input, sizeof(char[150]), 0) < 0) {
+				errorhandler("receive failed.\n");
+				// CHIUSURA DELLA CONNESSIONE
+				closesocket(client_socket);
+				clearwinsock();
+				clientHandler = 0;
+			} else {
+				if ((input[0] == '=') && (input[1] == '\0')) {
+					printf("Ricevuta richiesta abbandono. Chiusura socket.");
+					system("pause");
+					closesocket(client_socket);
+					clientHandler = 0;
+				} else {
+					operator = input[0];
+					if (operator == '+' || operator == '-' || operator == '/'
+							|| operator == '*') {
+						if (isspace(input[1]) && (input[2] != '\0')
+								&& !isspace(input[2])) {
+							i = 2;
+							while (!isspace(input[i])) {
+								first[i - 2] = input[i];
+								i++;
+							}
+							i++;
+							if (input[i] != '\0') {
+								j = 0;
+								while (input[i] != '\0' && !isspace(input[i])) {
+									second[j] = input[i];
+									i++;
+									j++;
+								}
+								if (isspace(input[i]) && input[i + 1] != '\0') {
+									errorhandler("Unavailable operation.");
+								} else {
+
+
+									//OPERAZIONI
+
+
+
+
+
+								}
+							} else {
+								errorhandler("Unavailable operation.");
+							}
+							memset(first, 0, sizeof(input));
+							memset(second, 0, sizeof(input));
+						} else {
+							errorhandler("Unavailable operation.");
+						}
+					} else {
+						errorhandler("Unavailable operation.");
+
+					}
+					operator = 0;
+					printf("%s", input);
+				}
+			}
 		}
-		printf("stringa: %s, intero: %d", ricevuto.stringa, ricevuto.numero);
-		system("pause");
 	} // end-while
 } // end-main
