@@ -1,7 +1,7 @@
 /*
  ============================================================================
  Name        : ClientTCP.c
- Author      : AleCongi
+ Author      : AleCongi (Alessandro Congedo), Giorgia Villano
  Version     :
  Copyright   : Your copyright notice
  Description : Hello World in C, Ansi-style
@@ -23,39 +23,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include "ClientTCP.h"
 #define PROTOPORT 27015 // default protocol port number
-
-void errorhandler(char *errorMessage) {
-	printf("%s", errorMessage);
-}
-
-void clearwinsock() {
-#if defined WIN32
-	WSACleanup();
-#endif
-}
-void removeExtraSpaces(char *str) {
-	int i, x;
-	for (i = x = 0; str[i]; ++i)
-		if (!isspace(str[i]) || ((i > 0) && !isspace(str[i - 1]))) {
-			str[x++] = str[i];
-		}
-	str[x] = '\0';
-}
-
-char* removeLeadingSpaces(char *str) {
-	static char str1[150];
-	int count = 0, j, k;
-	while (str[count] == ' ') {
-		count++;
-	}
-	for (j = count, k = 0; str[j] != '\0'; j++, k++) {
-		str1[k] = str[j];
-	}
-	str1[k] = '\0';
-	removeExtraSpaces(str1);
-	return str1;
-}
 
 int main(int argc, char *argv[]) {
 	int port;
@@ -105,6 +74,8 @@ int main(int argc, char *argv[]) {
 	char resultant[150];
 
 	while (1) {
+		memset(input, 0, sizeof(input));
+		memset(rmvSpace, 0, sizeof(char[150]));
 		gets(input);
 		rmvSpace = removeLeadingSpaces(input);
 		if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
@@ -129,15 +100,38 @@ int main(int argc, char *argv[]) {
 				printf("\nResult: %s\n", resultant);
 			}
 		}
-		memset(input, 0, sizeof(input));
-		memset(rmvSpace, 0, sizeof(char[150]));
 	}
+}
 
-	// CHIUSURA DELLA CONNESSIONE
-	closesocket(c_socket);
-	clearwinsock();
-	printf("\n"); // Print a final linefeed
-	system("pause");
-	return (0);
-} // end-main
+void errorhandler(char *errorMessage) {
+	printf("%s", errorMessage);
+}
+
+void clearwinsock() {
+#if defined WIN32
+	WSACleanup();
+#endif
+}
+void removeExtraSpaces(char *str) {
+	int i, x;
+	for (i = x = 0; str[i]; ++i)
+		if (!isspace(str[i]) || ((i > 0) && !isspace(str[i - 1]))) {
+			str[x++] = str[i];
+		}
+	str[x] = '\0';
+}
+
+char* removeLeadingSpaces(char *str) {
+	static char str1[150];
+	int count = 0, j, k;
+	while (str[count] == ' ') {
+		count++;
+	}
+	for (j = count, k = 0; str[j] != '\0'; j++, k++) {
+		str1[k] = str[j];
+	}
+	str1[k] = '\0';
+	removeExtraSpaces(str1);
+	return str1;
+}
 
