@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #define PROTOPORT 27015 // default protocol port number
-#define QLEN 6 // size of request queue
 
 void errorhandler(char *errorMessage) {
 	printf("%s", errorMessage);
@@ -103,6 +102,7 @@ int main(int argc, char *argv[]) {
 
 	char input[150];
 	char *rmvSpace;
+	char resultant[150];
 
 	while (1) {
 		gets(input);
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 			send(c_socket, rmvSpace, sizeof(char[150]), 0);
 			closesocket(c_socket);
 			clearwinsock();
-			return (0);
+			return 0;
 		} else {
 			if (send(c_socket, rmvSpace, sizeof(char[150]), 0) < 0) {
 				errorhandler("Failed to send.\n");
@@ -119,7 +119,15 @@ int main(int argc, char *argv[]) {
 				clearwinsock();
 				return -1;
 			}
-			//RISULTATO
+			if (recv(c_socket, resultant, sizeof(char[150]), 0) < 0) {
+				errorhandler("receive failed.\n");
+				// CHIUSURA DELLA CONNESSIONE
+				closesocket(c_socket);
+				clearwinsock();
+				return -1;
+			} else {
+				printf("\nResult: %s\n", resultant);
+			}
 		}
 		memset(input, 0, sizeof(input));
 		memset(rmvSpace, 0, sizeof(char[150]));
