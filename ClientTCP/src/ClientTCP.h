@@ -8,10 +8,13 @@
 #ifndef CLIENTTCP_H_
 #define CLIENTTCP_H_
 
-void errorhandler(char*);
-void clearwinsock();
+void errorHandler(char*);
+void clearWinSock();
 
 void removeExtraSpaces(char*);
 char* removeLeadingSpaces(char*);
+
+void setAddressPort(struct sockaddr_in *, int, char*);
+int sockBuild(struct sockaddr_in *, int, char**);
 
 #endif /* CLIENTTCP_H_ */
