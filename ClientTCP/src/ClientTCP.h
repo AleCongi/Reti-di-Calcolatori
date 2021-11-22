@@ -15,6 +15,6 @@ void removeExtraSpaces(char*);
 char* removeLeadingSpaces(char*);
 
 void setAddressPort(struct sockaddr_in *, int, char*);
-int sockBuild(struct sockaddr_in *, int, char**);
+struct sockaddr_in sockBuild(int *, int, char **);
 
 #endif /* CLIENTTCP_H_ */

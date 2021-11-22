@@ -29,6 +29,6 @@ char* mult(int, int);
 char* division(int, int);
 
 void setAddressPort(struct sockaddr_in *, int, char*);
-int sockBuild(struct sockaddr_in *, int, char**);
+struct sockaddr_in sockBuild(int *, int, char **);
 
 #endif /* SERVERTCP_H_ */

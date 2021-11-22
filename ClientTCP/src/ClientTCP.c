@@ -39,58 +39,60 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 	int c_socket;
+	int check = 1;
 	c_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (c_socket < 0) {
+	if (c_socket != -1) {
+		// ASSEGNAZIONE DI UN INDIRIZZO ALLA SOCKET
+		struct sockaddr_in sad = sockBuild(&check, argc, argv);
+		if (check) {
+			// CONNESSIONE AL SERVER
+			if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad)) == 0) {
+				char input[150];
+				char resultant[150];
+				char *rmvSpace;
+				while (1) {
+					memset(input, 0, sizeof(input));
+					gets(input);
+					rmvSpace = removeLeadingSpaces(input);
+					if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
+						send(c_socket, rmvSpace, sizeof(char[150]), 0);
+						closesocket(c_socket);
+						clearWinSock();
+						return 1;
+					} else {
+						if (send(c_socket, rmvSpace, sizeof(char[150]), 0)
+								!= -1) {
+							if (recv(c_socket, resultant, sizeof(char[150]), 0)
+									!= -1) {
+								printf("\nResult: %s\n", resultant);
+							} else {
+								errorHandler("Failed to receive.\n");
+								closesocket(c_socket);
+								clearWinSock();
+								return -1;
+							}
+						} else {
+							errorHandler("Failed to send.\n");
+							closesocket(c_socket);
+							clearWinSock();
+							return -1;
+						}
+					}
+					memset(rmvSpace, 0, sizeof(char[150]));
+				}
+			} else {
+				errorHandler("Failed to connect.\n");
+				closesocket(c_socket);
+				clearWinSock();
+				return -1;
+			}
+		}
+		return -1;
+	} else {
 		errorHandler("socket creation failed.\n");
 		clearWinSock();
 		return -1;
 	}
-	// ASSEGNAZIONE DI UN INDIRIZZO ALLA SOCKET
-	struct sockaddr_in sad;
-	memset(&sad, 0, sizeof(sad));
-	if (sockBuild(&sad, argc, argv)) {
-		// CONNESSIONE AL SERVER
-		if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad)) < 0) {
-			errorHandler("Failed to connect.\n");
-			closesocket(c_socket);
-			clearWinSock();
-			return -1;
-		}
-
-		char input[150];
-		char *rmvSpace;
-		char resultant[150];
-
-		while (1) {
-			memset(input, 0, sizeof(input));
-			memset(rmvSpace, 0, sizeof(char[150]));
-			gets(input);
-			rmvSpace = removeLeadingSpaces(input);
-			if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
-				send(c_socket, rmvSpace, sizeof(char[150]), 0);
-				closesocket(c_socket);
-				clearWinSock();
-				return 1;
-			} else {
-				if (send(c_socket, rmvSpace, sizeof(char[150]), 0) < 0) {
-					errorHandler("Failed to send.\n");
-					closesocket(c_socket);
-					clearWinSock();
-					return -1;
-				}
-				if (recv(c_socket, resultant, sizeof(char[150]), 0) < 0) {
-					errorHandler("receive failed.\n");
-					// CHIUSURA DELLA CONNESSIONE
-					closesocket(c_socket);
-					clearWinSock();
-					return -1;
-				} else {
-					printf("\nResult: %s\n", resultant);
-				}
-			}
-		}
-	}
-	return -1;
 }
 
 void errorHandler(char *errorMessage) {
@@ -130,20 +132,21 @@ void setAddressPort(struct sockaddr_in *sad, int port, char *ip) {
 	sad->sin_port = htons(port);
 }
 
-int sockBuild(struct sockaddr_in *sad, int argc, char *argv[]) {
-	if (argc > 0) {
+struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
+	struct sockaddr_in sad;
+	memset(&sad, 0, sizeof(sad));
+	sad.sin_family = AF_INET;
+	if (argc > 1) {
 		int port = atoi(argv[2]);
 		if (port < 0) {
 			errorHandler("Bad port number.\n");
-			system("pause");
-			return 0;
+			*ok = 0;
 		} else {
-			setAddressPort(sad, port, argv[1]);
+			setAddressPort(&sad, port, argv[1]);
 		}
 	} else {
-		setAddressPort(sad, PROTOPORT, IP);
+		setAddressPort(&sad, PROTOPORT, IP);
 	}
-	sad->sin_family = AF_INET;
-	return 1;
+	return sad;
 }
 
