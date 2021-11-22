@@ -136,16 +136,21 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 	struct sockaddr_in sad;
 	memset(&sad, 0, sizeof(sad));
 	sad.sin_family = AF_INET;
-	if (argc > 1) {
+	if (argc == 1) {
+		setAddressPort(&sad, PROTOPORT, IP);
+	} else if (argc == 2) {
+		setAddressPort(&sad, PROTOPORT, argv[1]);
+	} else if (argc == 3) {
 		int port = atoi(argv[2]);
-		if (port < 0) {
+		if (port > 0) {
+			setAddressPort(&sad, port, argv[1]);
+		} else {
 			errorHandler("Bad port number.\n");
 			*ok = 0;
-		} else {
-			setAddressPort(&sad, port, argv[1]);
 		}
 	} else {
-		setAddressPort(&sad, PROTOPORT, IP);
+		*ok = 0;
+		memset(&sad, 0, sizeof(sad));
 	}
 	return sad;
 }

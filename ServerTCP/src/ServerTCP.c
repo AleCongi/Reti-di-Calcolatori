@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 					int clientHandler = 0; //index to handle leaving will
 
 					while (1) {
-						printf("Waiting for a client to connect...");
+						printf("Waiting for a client to connect...\n");
 						if ((client_socket = accept(my_socket,
 								(struct sockaddr*) &cad, &client_len)) < 0) {
 							errorHandler("accept() failed.\n");
@@ -156,48 +156,6 @@ void clearWinSock() {
 #endif
 }
 
-//reverses a string 'str' of length 'len'
-void reverse(char *str, int len) {
-	int i = 0, j = len - 1, temp;
-	while (i < j) {
-		temp = str[i];
-		str[i] = str[j];
-		str[j] = temp;
-		i++;
-		j--;
-	}
-}
-
-/*converts a given integer x to string str[].
- d is the number of digits required in the output.
- If d is more than the number of digits in x,
- then 0s are added at the beginning.*/
-int intToStr(int x, char str[], int d) {
-	int i = 0;
-	while (x) {
-		str[i++] = (x % 10) + '0';
-		x = x / 10;
-	}
-	while (i < d)
-		str[i++] = '0';
-
-	reverse(str, i);
-	str[i] = '\0';
-	return i;
-}
-
-// Converts a floating-point/double number to a string.
-void ftoa(float n, char *res, int afterpoint) {
-	int ipart = (int) n;
-	float fpart = n - (float) ipart;
-	int i = intToStr(ipart, res, 0);
-	if (afterpoint != 0) {
-		res[i] = '.';
-		fpart = fpart * pow(10, afterpoint);
-		intToStr((int) fpart, res + i + 1, afterpoint);
-	}
-}
-
 //closes client socket
 void leave(int clientSocket) {
 	printf("Leaving request acquired: closing socket.\n");
@@ -260,7 +218,7 @@ int numericCheck(char *first, char *second) {
 	int checkDigit = 1;
 	//is the first value a number?
 	while (first[i] != '\0') {
-		if (isdigit(first[i]) == 0) {
+		if (isdigit(first[i]) == 0 || first[i] == '.' || first[i] == ',') {
 			checkDigit = 0;
 		}
 		i++;
@@ -269,8 +227,10 @@ int numericCheck(char *first, char *second) {
 	if (checkDigit == 1) {
 		//is the second value a number?
 		while (second[i] != '\0') {
-			if (isdigit(second[i]) == 0) {
+			if (isdigit(second[i]) == 0 || second[i] == '.'
+					|| second[i] == ',') {
 				checkDigit = 0;
+				printf("%c", second[i]);
 			}
 			i++;
 		}
@@ -292,7 +252,7 @@ void populateValues(char *input, char *first, char *second) {
 	}
 	i++;
 	int j = 0;
-	while (input[i] != '\0' && !isspace(input[i]) && isdigit(input[i]) != 0) {
+	while (input[i] != '\0' && !isspace(input[i])) {
 		second[j] = input[i];
 		i++;
 		j++;
@@ -326,7 +286,14 @@ char* division(int first, int second) {
 		strcpy(result, "Impossible Calculation\n");
 	} else {
 		float resultFlt = (float) first / (float) second;
-		ftoa(resultFlt, result, 3);
+		gcvt(resultFlt, 3, result);
+		int i = 0;
+		while (result[i + 1] != '\0') {
+			i++;
+		}
+		if (result[i] == '.' || result[i] == ',') {
+			result[i] = ' ';
+		}
 	}
 	return result;
 }
@@ -356,16 +323,21 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 	struct sockaddr_in sad;
 	memset(&sad, 0, sizeof(sad));
 	sad.sin_family = AF_INET;
-	if (argc > 1) {
+	if (argc == 1) {
+		setAddressPort(&sad, PROTOPORT, IP);
+	} else if (argc == 2) {
+		setAddressPort(&sad, PROTOPORT, argv[1]);
+	} else if (argc == 3) {
 		int port = atoi(argv[2]);
-		if (port < 0) {
+		if (port > 0) {
+			setAddressPort(&sad, port, argv[1]);
+		} else {
 			errorHandler("Bad port number.\n");
 			*ok = 0;
-		} else {
-			setAddressPort(&sad, port, argv[1]);
 		}
 	} else {
-		setAddressPort(&sad, PROTOPORT, IP);
+		*ok = 0;
+		memset(&sad, 0, sizeof(sad));
 	}
 	return sad;
 }
