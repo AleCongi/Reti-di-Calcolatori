@@ -51,9 +51,9 @@ int main(int argc, char *argv[]) {
 				if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad))
 						== 0) {
 					printf(
-							"Connection established with %s:%d\nTo make an operation,"
+							"\n\nConnection established with %s:%d\nTo make an operation,"
 									"insert parameter in this order:\n*operator(+,-,*,/)* *integer_value_1*"
-									"*integer_value 2*\n ex: + 25 13\nPress = to quit connection\n", inet_ntoa(sad.sin_addr), sad.sin_port);
+									"*integer_value 2*\n ex: + 25 13\nPress = to quit connection\n\n\n", inet_ntoa(sad.sin_addr), sad.sin_port);
 					char input[150];
 					char resultant[150];
 					char *rmvSpace;
