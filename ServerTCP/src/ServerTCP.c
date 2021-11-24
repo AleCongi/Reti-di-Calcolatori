@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 							clientHandler = 1;
 							while (clientHandler == 1) {
 								memset(input, 0, sizeof(input));
-								memset(first, 0, sizeof(input));
+								memset(first, 0, sizeof(first));
 								memset(second, 0, sizeof(second));
 								if (recv(client_socket, input,
 										sizeof(char[150]), 0) < 0) {
@@ -362,17 +362,16 @@ char* division(int first, int second) {
 char* calculation(int operator, char *first, char *second) {
 	int firstInt = atoi(first);
 	int secondInt = atoi(second);
-	char *result;
 	if (operator == '+') {
-		result = sum(firstInt, secondInt);
+		return sum(firstInt, secondInt);
 	} else if (operator == '-') {
-		result = sub(firstInt, secondInt);
+		return sub(firstInt, secondInt);
 	} else if (operator == '*') {
-		result = mult(firstInt, secondInt);
+		return mult(firstInt, secondInt);
 	} else if (operator == '/') {
-		result = division(firstInt, secondInt);
+		return division(firstInt, secondInt);
 	}
-	return result;
+	return 0;
 }
 
 //Population of socket structure: IP and PORT
