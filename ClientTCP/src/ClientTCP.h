@@ -14,7 +14,9 @@ void clearWinSock();
 void removeExtraSpaces(char*);
 char* removeLeadingSpaces(char*);
 
-void setAddressPort(struct sockaddr_in *, int, char*);
+int argumentsCheck(int, char**);
+
+void setAddresses(struct sockaddr_in *, int, char*);
 struct sockaddr_in sockBuild(int *, int, char **);
 
 #endif /* CLIENTTCP_H_ */

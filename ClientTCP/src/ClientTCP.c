@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "ClientTCP.h"
+
 #define PROTOPORT 27015 // default protocol port number
 #define IP "127.0.0.1" //default IP
 
@@ -42,54 +43,70 @@ int main(int argc, char *argv[]) {
 	int check = 1;
 	c_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (c_socket != -1) {
-		// ASSEGNAZIONE DI UN INDIRIZZO ALLA SOCKET
-		struct sockaddr_in sad = sockBuild(&check, argc, argv);
-		if (check) {
-			// CONNESSIONE AL SERVER
-			if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad)) == 0) {
-				char input[150];
-				char resultant[150];
-				char *rmvSpace;
-				while (1) {
-					memset(input, 0, sizeof(input));
-					gets(input);
-					rmvSpace = removeLeadingSpaces(input);
-					if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
-						send(c_socket, rmvSpace, sizeof(char[150]), 0);
-						closesocket(c_socket);
-						clearWinSock();
-						return 1;
-					} else {
-						if (send(c_socket, rmvSpace, sizeof(char[150]), 0)
-								!= -1) {
-							if (recv(c_socket, resultant, sizeof(char[150]), 0)
+		if (argumentsCheck(argc, argv)) {
+			//SOCKET ADDRESSES BUILD
+			struct sockaddr_in sad = sockBuild(&check, argc, argv);
+			if (check) {
+				//TRYING TO REACH SERVER
+				if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad))
+						== 0) {
+					printf(
+							"Connection established with %s:%d\nTo make an operation,"
+									"insert parameter in this order:\n*operator(+,-,*,/)* *integer_value_1*"
+									"*integer_value 2*\n ex: + 25 13\nPress = to quit connection\n", inet_ntoa(sad.sin_addr), sad.sin_port);
+					char input[150];
+					char resultant[150];
+					char *rmvSpace;
+					while (1) {
+						memset(input, 0, sizeof(input));
+						gets(input);
+						rmvSpace = removeLeadingSpaces(input);
+						//"=" IS THE QUIT COMMAND
+						if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
+							send(c_socket, rmvSpace, sizeof(char[150]), 0);
+							closesocket(c_socket);
+							clearWinSock();
+							return 1;
+						} else {
+							if (send(c_socket, rmvSpace, sizeof(char[150]), 0)
 									!= -1) {
-								printf("\nResult: %s\n", resultant);
+								//CLIENTS WAITS FOR AN ANSWER
+								if (recv(c_socket, resultant, sizeof(char[150]),
+										0) != -1) {
+									printf("\nResult: %s\n", resultant);
+								} else {
+									errorHandler("Failed to receive.\n");
+									closesocket(c_socket);
+									clearWinSock();
+									return -1;
+								}
 							} else {
-								errorHandler("Failed to receive.\n");
+								errorHandler("Failed to send.\n");
 								closesocket(c_socket);
 								clearWinSock();
 								return -1;
 							}
-						} else {
-							errorHandler("Failed to send.\n");
-							closesocket(c_socket);
-							clearWinSock();
-							return -1;
 						}
+						memset(rmvSpace, 0, sizeof(char[150]));
 					}
-					memset(rmvSpace, 0, sizeof(char[150]));
+				} else {
+					errorHandler("Failed to connect.\n");
+					closesocket(c_socket);
+					clearWinSock();
+					return -1;
 				}
 			} else {
-				errorHandler("Failed to connect.\n");
-				closesocket(c_socket);
+				errorHandler("Socket Build failed.\n");
 				clearWinSock();
 				return -1;
 			}
+		} else {
+			errorHandler("Invalid arguments.\n");
+			clearWinSock();
+			return -1;
 		}
-		return -1;
 	} else {
-		errorHandler("socket creation failed.\n");
+		errorHandler("Socket Creation failed.\n");
 		clearWinSock();
 		return -1;
 	}
@@ -104,6 +121,9 @@ void clearWinSock() {
 	WSACleanup();
 #endif
 }
+
+//This function would reduce this kind of input "+      26   15"
+//into "+ 26 15"
 void removeExtraSpaces(char *str) {
 	int i, x;
 	for (i = x = 0; str[i]; ++i)
@@ -113,6 +133,8 @@ void removeExtraSpaces(char *str) {
 	str[x] = '\0';
 }
 
+//This function would reduce this kind of input "      + 26 15"
+//into "+ 26 15"
 char* removeLeadingSpaces(char *str) {
 	static char str1[150];
 	int count = 0, j, k;
@@ -127,23 +149,62 @@ char* removeLeadingSpaces(char *str) {
 	return str1;
 }
 
-void setAddressPort(struct sockaddr_in *sad, int port, char *ip) {
+//Checks if custom IP and PORT are valid
+int argumentsCheck(int argc, char **argv) {
+	if (argc > 1) {
+		int pointNumber = 0;
+		int i = 0;
+		while (argv[1][i] |= '\0') {
+			if (argv[1][i] == '.') {
+				if (pointNumber == 1) {
+					if (argv[1][i - 1] == '0' && argv[1][i - 2] == '.'
+							&& argv[1][i + 1] == '0' && argv[1][i + 3] == '0') {
+						return 0;
+					}
+				}
+				pointNumber++;
+			}
+			i++;
+		}
+		if (pointNumber == 3) {
+			if (argc == 2){
+			return 1;
+			} else if (argc == 3){
+				if (atoi(argv[2]) >= 0 && atoi(argv[2]) <= 65535){
+					return 1;
+				} else {
+					return 0;
+				}
+			}
+		} else {
+			return 0;
+		}
+	}else if (argc == 1) {
+		return 1;
+	}
+	return 0;
+}
+
+//Population of socket structure: IP and PORT
+void setAddresses(struct sockaddr_in *sad, int port, char *ip) {
 	sad->sin_addr.s_addr = inet_addr(ip);
 	sad->sin_port = htons(port);
 }
 
+//If arguments were passed during Server Run,
+//the function inserts argvs in socket structure
 struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 	struct sockaddr_in sad;
 	memset(&sad, 0, sizeof(sad));
 	sad.sin_family = AF_INET;
 	if (argc == 1) {
-		setAddressPort(&sad, PROTOPORT, IP);
+		setAddresses(&sad, PROTOPORT, IP);
 	} else if (argc == 2) {
-		setAddressPort(&sad, PROTOPORT, argv[1]);
+		setAddresses(&sad, PROTOPORT, argv[1]);
 	} else if (argc == 3) {
 		int port = atoi(argv[2]);
 		if (port > 0) {
-			setAddressPort(&sad, port, argv[1]);
+			setAddresses(&sad, port, argv[1]);
 		} else {
 			errorHandler("Bad port number.\n");
 			*ok = 0;

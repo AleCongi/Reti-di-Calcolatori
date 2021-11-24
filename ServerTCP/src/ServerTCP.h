@@ -19,6 +19,7 @@ void ftoa(float, char*, int);
 int legitOperator(char);
 int legitInput(char*);
 int numericCheck(char*, char*);
+int argumentsCheck(int, char**);
 
 void populateValues(char*, char*, char*);
 
@@ -28,7 +29,7 @@ char* sub(int, int);
 char* mult(int, int);
 char* division(int, int);
 
-void setAddressPort(struct sockaddr_in *, int, char*);
+void setAddresses(struct sockaddr_in *, int, char*);
 struct sockaddr_in sockBuild(int *, int, char **);
 
 #endif /* SERVERTCP_H_ */
