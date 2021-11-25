@@ -29,6 +29,7 @@ char* sub(int, int);
 char* mult(int, int);
 char* division(int, int);
 
+//Common functions
 void setAddresses(struct sockaddr_in *, int, char*);
 struct sockaddr_in sockBuild(int *, int, char **);
 

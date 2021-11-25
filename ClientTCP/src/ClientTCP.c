@@ -51,14 +51,15 @@ int main(int argc, char *argv[]) {
 				if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad))
 						== 0) {
 					printf(
-							"\n\nConnection established with %s:%d\nTo make an operation,"
+							"\n\nConnection established.\nTo make an operation,"
 									"insert parameter in this order:\n*operator(+,-,*,/)* *integer_value_1*"
-									"*integer_value 2*\n ex: + 25 13\nPress = to quit connection\n\n\n", inet_ntoa(sad.sin_addr), sad.sin_port);
+									"*integer_value 2*\n ex: + 25 13\nPress = to quit connection\n\n\n");
 					char input[150];
 					char resultant[150];
 					char *rmvSpace;
 					while (1) {
 						memset(input, 0, sizeof(input));
+						printf("\nOperation: ");
 						gets(input);
 						rmvSpace = removeLeadingSpaces(input);
 						//"=" IS THE QUIT COMMAND
@@ -73,7 +74,7 @@ int main(int argc, char *argv[]) {
 								//CLIENTS WAITS FOR AN ANSWER
 								if (recv(c_socket, resultant, sizeof(char[150]),
 										0) != -1) {
-									printf("\nResult: %s\n", resultant);
+									printf("Result: %s\n", resultant);
 								} else {
 									errorHandler("Failed to receive.\n");
 									closesocket(c_socket);
@@ -167,10 +168,18 @@ int argumentsCheck(int argc, char **argv) {
 			i++;
 		}
 		if (pointNumber == 3) {
-			if (argc == 2){
-			return 1;
-			} else if (argc == 3){
-				if (atoi(argv[2]) >= 0 && atoi(argv[2]) <= 65535){
+			if (argc == 2) {
+				return 1;
+			} else if (argc == 3) {
+				int i = 0;
+				while (argv[2][i] != '\0') {
+					if (!isdigit(argv[2][i]) || argv[2][i] == '.'
+							|| argv[2][i] == ',') {
+						return 0;
+					}
+					i++;
+				}
+				if (atoi(argv[2]) >= 0 && atoi(argv[2]) <= 65535) {
 					return 1;
 				} else {
 					return 0;
@@ -179,7 +188,7 @@ int argumentsCheck(int argc, char **argv) {
 		} else {
 			return 0;
 		}
-	}else if (argc == 1) {
+	} else if (argc == 1) {
 		return 1;
 	}
 	return 0;
@@ -194,25 +203,25 @@ void setAddresses(struct sockaddr_in *sad, int port, char *ip) {
 //If arguments were passed during Server Run,
 //the function inserts argvs in socket structure
 struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
-	struct sockaddr_in sad;
-	memset(&sad, 0, sizeof(sad));
-	sad.sin_family = AF_INET;
+	struct sockaddr_in cad;
+	memset(&cad, 0, sizeof(cad));
+	cad.sin_family = AF_INET;
 	if (argc == 1) {
-		setAddresses(&sad, PROTOPORT, IP);
+		setAddresses(&cad, PROTOPORT, IP);
 	} else if (argc == 2) {
-		setAddresses(&sad, PROTOPORT, argv[1]);
+		setAddresses(&cad, PROTOPORT, argv[1]);
 	} else if (argc == 3) {
 		int port = atoi(argv[2]);
 		if (port > 0) {
-			setAddresses(&sad, port, argv[1]);
+			setAddresses(&cad, port, argv[1]);
 		} else {
 			errorHandler("Bad port number.\n");
 			*ok = 0;
 		}
 	} else {
 		*ok = 0;
-		memset(&sad, 0, sizeof(sad));
+		memset(&cad, 0, sizeof(cad));
 	}
-	return sad;
+	return cad;
 }
 

@@ -28,7 +28,7 @@
 
 #define PROTOPORT 27015 // default protocol port number
 #define IP "127.0.0.1" // default IP number
-#define ERROR_PRINT "\nUnable to calculate:\nmust receive *operator(+,-,*,/)* *integer_value_1* *integer_value 2*"
+#define ERROR_PRINT "Unable to calculate.\nMust receive *operator(+,-,*,/)* *integer_value_1* *integer_value 2*"
 #define QLEN 5 // size of request queue (NOTES: QLEN "5" HANDLES 6 CLIENTS IN QUEUE!)
 
 int main(int argc, char *argv[]) {
@@ -285,10 +285,18 @@ int argumentsCheck(int argc, char **argv) {
 			i++;
 		}
 		if (pointNumber == 3) {
-			if (argc == 2){
-			return 1;
-			} else if (argc == 3){
-				if (atoi(argv[2]) >= 0 && atoi(argv[2]) <= 65535){
+			if (argc == 2) {
+				return 1;
+			} else if (argc == 3) {
+				int i = 0;
+				while (argv[2][i] != '\0') {
+					if (!isdigit(argv[2][i]) || argv[2][i] == '.'
+							|| argv[2][i] == ',') {
+						return 0;
+					}
+					i++;
+				}
+				if (atoi(argv[2]) >= 0 && atoi(argv[2]) <= 65535) {
 					return 1;
 				} else {
 					return 0;
@@ -297,7 +305,7 @@ int argumentsCheck(int argc, char **argv) {
 		} else {
 			return 0;
 		}
-	}else if (argc == 1) {
+	} else if (argc == 1) {
 		return 1;
 	}
 	return 0;
