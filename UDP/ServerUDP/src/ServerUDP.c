@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 					client_len = sizeof(cad); //set the size of the client address
 
 					char input[MAXECHO]; //input string received from client
-					char operator; //assumes the character of the operation needed (+, -, *, /)
+					char operator[2]; //assumes the character of the operation needed (+, -, *, /)
 					char first[127]; //first value
 					char second[127]; //second value
 					char *finalRes = malloc(sizeof(char[MAXECHO])); //final result, variable we want to send back to client
@@ -83,9 +83,10 @@ int main(int argc, char *argv[]) {
 										|| (isspace(input[1])
 												&& input[2] == '\0'))) {
 						} else {
-							operator = input[0];
+							operator[0] = input[0];
+							operator[1] = '\0';
 							//INPUT INTEGRITY CONTROL
-							if (legitOperator(operator) && legitInput(input)) {
+							if (legitOperator(operator[0]) && legitInput(input)) {
 								//INPUT TOKENIZATION
 								populateValues(input, first, second);
 								//NUMERIC CONTROL
@@ -119,7 +120,7 @@ int main(int argc, char *argv[]) {
 									errorHandler("Failed to send.\n");
 								}
 							}
-							operator = 0;
+							operator[0] = 0;
 						}
 					}
 				} else {
@@ -340,19 +341,28 @@ char* division(int first, int second) {
 	return result;
 }
 
-char* calculation(int operator, char *first, char *second) {
+char* calculation(char *operator, char *first, char *second) {
 	int firstInt = atoi(first);
 	int secondInt = atoi(second);
-	if (operator == '+') {
-		return sum(firstInt, secondInt);
-	} else if (operator == '-') {
-		return sub(firstInt, secondInt);
-	} else if (operator == '*') {
-		return mult(firstInt, secondInt);
-	} else if (operator == '/') {
-		return division(firstInt, secondInt);
+	char *result = malloc(sizeof(char[MAXECHO]));
+	strcpy(result, first);
+	strcat(result, " ");
+	strcat(result, operator);
+	strcat(result, " ");
+	strcat(result, second);
+	strcat(result, " ");
+	strcat(result, "=");
+	strcat(result, " ");
+	if (operator[0] == '+') {
+		strcat(result, sum(firstInt, secondInt));
+	} else if (operator[0] == '-') {
+		strcat(result, sub(firstInt, secondInt));
+	} else if (operator[0] == '*') {
+		strcat(result, mult(firstInt, secondInt));
+	} else if (operator[0] == '/') {
+		strcat(result, division(firstInt, secondInt));
 	}
-	return 0;
+	return result;
 }
 
 //Population of socket structure: IP and PORT

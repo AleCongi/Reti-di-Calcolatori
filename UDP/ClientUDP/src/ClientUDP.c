@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
 						"*integer_value_1* *integer_value 2*\n ex: + 25 13\nPress = to quit connection\n\n\n");
 				char input[MAXECHO];
 				char resultant[MAXECHO];
-				char *rmvSpace;
+				char *rmvSpace  = malloc(sizeof(char[MAXECHO]));
+				char safeString[MAXECHO];
 				while (1) {
 					memset(input, 0, sizeof(input));
 					printf("\nOperation: ");
@@ -69,16 +70,16 @@ int main(int argc, char *argv[]) {
 						return 1;
 					} else {
 						// ECHOMAX CHECK
-						if (sendto(c_socket, rmvSpace, sizeof(char[MAXECHO]), 0, (struct sockaddr *) &sad, sizeof(sad))
-								== sizeof(char[MAXECHO])) {
+						strcpy(safeString, rmvSpace);
+						if (sendto(c_socket, safeString, sizeof(safeString), 0, (struct sockaddr *) &sad, sizeof(sad))
+								== sizeof(safeString)) {
 							//CLIENTS WAITS FOR AN ANSWER
 							recvfrom(c_socket, resultant, sizeof(resultant), 0, (struct sockaddr *) &sadCheck, &sadCheckLen);
 							if (sad.sin_addr.s_addr == sadCheck.sin_addr.s_addr) {
-								printf("Result: %s\n", resultant);
+								printf("%s\n", resultant);
 							} else {
 								errorHandler("Failed to receive.\n");
 								system("PAUSE");
-
 								closesocket(c_socket);
 								clearWinSock();
 								return -1;

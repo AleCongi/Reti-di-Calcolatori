@@ -23,7 +23,7 @@ int argumentsCheck(int, char**);
 
 void populateValues(char*, char*, char*);
 
-char* calculation(int, char*, char*);
+char* calculation(char*, char*, char*);
 char* sum(int, int);
 char* sub(int, int);
 char* mult(int, int);
