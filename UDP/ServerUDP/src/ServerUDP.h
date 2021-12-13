@@ -1,12 +1,12 @@
 /*
- * ServerTCP.h
+ * ServerUDP.h
  *
  *  Created on: 21 nov 2021
  *      Author: Alessandro
  */
 
-#ifndef SERVERTCP_H_
-#define SERVERTCP_H_
+#ifndef SERVERUDP_H_
+#define SERVERUDP_H_
 
 void clearWinSock();
 void errorHandler(char*);
@@ -33,4 +33,8 @@ char* division(int, int);
 void setAddresses(struct sockaddr_in *, int, char*);
 struct sockaddr_in sockBuild(int *, int, char **);
 
-#endif /* SERVERTCP_H_ */
+char* translateIntoString(char *);
+char* translateIntoInt(char *);
+
+
+#endif /* SERVERUDP_H_ */

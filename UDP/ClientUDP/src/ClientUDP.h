@@ -1,12 +1,12 @@
 /*
- * ClientTCP.h
+ * ClientUDP.h
  *
  *  Created on: 21 nov 2021
  *      Author: AleCongi
  */
 
-#ifndef CLIENTTCP_H_
-#define CLIENTTCP_H_
+#ifndef CLIENTUDP_H_
+#define CLIENTUDP_H_
 
 void errorHandler(char*);
 void clearWinSock();
@@ -20,4 +20,7 @@ int argumentsCheck(int, char**);
 void setAddresses(struct sockaddr_in *, int, char*);
 struct sockaddr_in sockBuild(int *, int, char **);
 
-#endif /* CLIENTTCP_H_ */
+char* translateIntoString(char *);
+char* translateIntoInt(char *);
+
+#endif /* CLIENTUDP_H_ */

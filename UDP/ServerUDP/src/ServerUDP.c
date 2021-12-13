@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : ServerTCP.c
+ Name        : ServerUDP.c
  Author      : AleCongi (Alessandro Congedo), Giorgia Villano
  Version     :
  Copyright   : Your copyright notice
@@ -24,12 +24,11 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
-#include "ServerTCP.h"
+#include "ServerUDP.h"
 
-#define PROTOPORT 27015 // default protocol port number
-#define IP "127.0.0.1" // default IP number
-#define ERROR_PRINT "Unable to calculate.\nMust receive *operator(+,-,*,/)* *integer_value_1* *integer_value 2*"
-#define QLEN 5 // size of request queue (NOTES: QLEN "5" HANDLES 6 CLIENTS IN QUEUE!)
+#define PROTOPORT 48000 // default protocol port number
+#define IP "localhost" // default IP number
+#define MAXECHO 255 //maximum buffer size
 
 int main(int argc, char *argv[]) {
 #if defined WIN32
@@ -43,7 +42,8 @@ int main(int argc, char *argv[]) {
 #endif
 	int my_socket;
 	int check = 1;
-	my_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	char ERROR_PRINT[MAXECHO] = { "Unable to calculate." };
+	my_socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (my_socket != -1) {
 		if (argumentsCheck(argc, argv)) {
 			//ADDRESSING SOCKET
@@ -51,103 +51,76 @@ int main(int argc, char *argv[]) {
 			if (check) {
 				if (bind(my_socket, (struct sockaddr*) &sad, sizeof(sad))
 						== 0) {
-					//SETTING LISTEN
-					if (listen(my_socket, QLEN) == 0) {
-						//ACCEPTING NEW CONNECTION
-						struct sockaddr_in cad; //structure for the client address
-						int client_socket; //socket descriptor for the client
-						int client_len; //the size of the client address
-						client_len = sizeof(cad); //set the size of the client address
+					//ACCEPTING NEW CONNECTION
+					struct sockaddr_in cad; //structure for the client address
+					int client_len; //the size of the client address
+					int package = 0;
+					client_len = sizeof(cad); //set the size of the client address
 
-						char input[150]; //input string received from client
-						char operator; //assumes the character of the operation needed (+, -, *, /)
-						char first[75]; //first value
-						char second[75]; //second value
-						char *finalRes; //final result, variable we want to send back to client
+					char input[MAXECHO]; //input string received from client
+					char operator; //assumes the character of the operation needed (+, -, *, /)
+					char first[127]; //first value
+					char second[127]; //second value
+					char *finalRes = malloc(sizeof(char[MAXECHO])); //final result, variable we want to send back to client
 
-						int clientHandler = 0; //index to handle leaving will
+					while (1) {
+						printf("Waiting for a client to connect...\n");
+						memset(input, 0, sizeof(char[MAXECHO]));
+						memset(first, 0, sizeof(char[127]));
+						memset(second, 0, sizeof(char[127]));
+						package = 0;
+						package = recvfrom(my_socket, input, sizeof(input), 0,
+								(struct sockaddr*) &cad, &client_len);
+						printf(
+								"Requested operation \'%s\' from client %s, ip %s\n",
+								input,
+								translateIntoString(inet_ntoa(cad.sin_addr)),
+								inet_ntoa(cad.sin_addr));
 
-						while (1) {
-							printf("Waiting for a client to connect...\n");
-							if ((client_socket = accept(my_socket,
-									(struct sockaddr*) &cad, &client_len))
-									< 0) {
-								errorHandler("accept() failed.\n");
-								closesocket(client_socket);
-								system("pause");
-								return 0;
-							}
-							printf("Connection established with %s:%d\n",
-									inet_ntoa(cad.sin_addr), cad.sin_port);
-							clientHandler = 1;
-							while (clientHandler == 1) {
-								memset(input, 0, sizeof(input));
-								memset(first, 0, sizeof(first));
-								memset(second, 0, sizeof(second));
-								if (recv(client_socket, input,
-										sizeof(char[150]), 0) < 0) {
-									errorHandler("Receive failed.\n");
-									closesocket(client_socket);
-									clientHandler = 0;
+						//QUIT REQUEST
+						if ((input[0] == '=')
+								&& ((input[1] == '\0')
+										|| (isspace(input[1])
+												&& input[2] == '\0'))) {
+						} else {
+							operator = input[0];
+							//INPUT INTEGRITY CONTROL
+							if (legitOperator(operator) && legitInput(input)) {
+								//INPUT TOKENIZATION
+								populateValues(input, first, second);
+								//NUMERIC CONTROL
+								if (numericCheck(first, second)) {
+									finalRes = calculation(operator, first,
+											second);
+									strcpy(input, finalRes);
+									//MODIFICARE FINEL RES COME SEGUE: VAL1 OP VAL2 = RES
+
+									//SENDING RESULT
+									if (sendto(my_socket, input, sizeof(input),
+											0, (struct sockaddr*) &cad,
+											client_len) != package) {
+										errorHandler("Failed to send.\n");
+									}
 								} else {
-									//QUIT REQUEST
-									if ((input[0] == '=')
-											&& ((input[1] == '\0')
-													|| (isspace(input[1])
-															&& input[2] == '\0'))) {
-										leave(client_socket);
-										clientHandler = 0;
-									} else {
-										operator = input[0];
-										//INPUT INTEGRITY CONTROL
-										if (legitOperator(operator)
-												&& legitInput(input)) {
-											//INPUT TOKENIZATION
-											populateValues(input, first,
-													second);
-											//NUMERIC CONTROL
-											if (numericCheck(first, second)) {
-												finalRes = calculation(operator,
-														first, second);
-												//SENDING RESULT
-												if (send(client_socket,
-														finalRes,
-														sizeof(char[150]), 0)
-														< 0) {
-													errorHandler(
-															"Failed to send.\n");
-													closesocket(client_socket);
-												}
-											} else {
-												//SENDING ERROR BACK TO CLIENT
-												if (send(client_socket,
-												ERROR_PRINT, sizeof(char[150]),
-														0) < 0) {
-													errorHandler(
-															"Failed to send.\n");
-													closesocket(client_socket);
-												}
-											}
-										} else {
-											//SENDING ERROR BACK TO CLIENT
-											if (send(client_socket, ERROR_PRINT,
-													sizeof(char[150]), 0) < 0) {
-												errorHandler(
-														"Failed to send.\n");
-												closesocket(client_socket);
-											}
-										}
-										operator = 0;
+									//SENDING ERROR BACK TO CLIENT
+									if (sendto(my_socket, ERROR_PRINT,
+											sizeof(ERROR_PRINT), 0,
+											(struct sockaddr*) &cad, client_len)
+											!= package) {
+										errorHandler("Failed to send.\n");
 									}
 								}
+							} else {
+								//SENDING ERROR BACK TO CLIENT
+								if (sendto(my_socket, ERROR_PRINT,
+										sizeof(ERROR_PRINT), 0,
+										(struct sockaddr*) &cad, client_len)
+										!= package) {
+									errorHandler("Failed to send.\n");
+								}
 							}
+							operator = 0;
 						}
-					} else {
-						errorHandler("listen() failed.\n");
-						closesocket(my_socket);
-						clearWinSock();
-						system("pause");
-						return -1;
 					}
 				} else {
 					errorHandler("bind() failed.\n");
@@ -330,24 +303,24 @@ void populateValues(char *input, char *first, char *second) {
 //MATH
 char* sum(int first, int second) {
 	int resultInt = first + second;
-	static char result[150];
+	static char result[MAXECHO];
 	itoa(resultInt, result, 10);
 	return result;
 }
 char* sub(int first, int second) {
 	int resultInt = first - second;
-	static char result[150];
+	static char result[MAXECHO];
 	itoa(resultInt, result, 10);
 	return result;
 }
 char* mult(int first, int second) {
 	int resultInt = first * second;
-	static char result[150];
+	static char result[MAXECHO];
 	itoa(resultInt, result, 10);
 	return result;
 }
 char* division(int first, int second) {
-	static char result[150];
+	static char result[MAXECHO];
 	// "0/0"
 	if (first == 0 && second == 0) {
 		strcpy(result, "Indeterminate Calculation\n");
@@ -384,7 +357,7 @@ char* calculation(int operator, char *first, char *second) {
 
 //Population of socket structure: IP and PORT
 void setAddresses(struct sockaddr_in *sad, int port, char *ip) {
-	sad->sin_addr.s_addr = inet_addr(ip);
+	sad->sin_addr.s_addr = inet_addr(translateIntoInt(ip));
 	sad->sin_port = htons(port);
 }
 
@@ -395,10 +368,13 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 	memset(&sad, 0, sizeof(sad));
 	sad.sin_family = AF_INET;
 	if (argc == 1) {
+		//TRANSLATE PROTOIP
 		setAddresses(&sad, PROTOPORT, IP);
 	} else if (argc == 2) {
+		//STRIP AND TRANSLATE
 		setAddresses(&sad, PROTOPORT, argv[1]);
 	} else if (argc == 3) {
+		//DELETE
 		int port = atoi(argv[2]);
 		if (port > 0) {
 			setAddresses(&sad, port, argv[1]);
@@ -411,5 +387,28 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 		memset(&sad, 0, sizeof(sad));
 	}
 	return sad;
+}
+
+char* translateIntoInt(char *input) {
+
+	struct hostent *host;
+	host = gethostbyname(input);
+	if (host == NULL) {
+		errorHandler("gethostbyname() failed.\n");
+		exit(EXIT_FAILURE);
+	} else {
+		struct in_addr *ina = (struct in_addr*) host->h_addr_list[0];
+		return inet_ntoa(*ina);
+	}
+}
+
+char* translateIntoString(char *input) {
+	struct in_addr addr;
+	struct hostent *host;
+
+	addr.s_addr = inet_addr(input);
+	host = gethostbyaddr((char*) &addr, 4, AF_INET);
+	char *canonical_name = host->h_name;
+	return canonical_name;
 }
 

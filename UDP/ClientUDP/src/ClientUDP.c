@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : ClientTCP.c
+ Name        : ClientUDP.c
  Author      : AleCongi (Alessandro Congedo), Giorgia Villano
  Version     :
  Copyright   : Your copyright notice
@@ -23,10 +23,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include "ClientTCP.h"
+#include "ClientUDP.h"
 
-#define PROTOPORT 27015 // default protocol port number
-#define IP "127.0.0.1" //default IP
+#define PROTOPORT 48000 // default protocol port number
+#define IP "localhost" //default IP
+#define MAXECHO 255 //maximum buffer size
 
 int main(int argc, char *argv[]) {
 
@@ -41,60 +42,57 @@ int main(int argc, char *argv[]) {
 #endif
 	int c_socket;
 	int check = 1;
-	c_socket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	c_socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (c_socket != -1) {
 		if (argumentsCheck(argc, argv)) {
 			//SOCKET ADDRESSES BUILD
 			struct sockaddr_in sad = sockBuild(&check, argc, argv);
+			struct sockaddr_in sadCheck;
+			int sadCheckLen = sizeof(sadCheck);
+			memset (&sadCheck, 0, sizeof (sadCheck));
 			if (check) {
-				//TRYING TO REACH SERVER
-				if (connect(c_socket, (struct sockaddr*) &sad, sizeof(sad))
-						== 0) {
-					printf(
-							"\n\nConnection established.\nTo make an operation,"
-									"insert parameter in this order:\n*operator(+,-,*,/)* *integer_value_1*"
-									"*integer_value 2*\n ex: + 25 13\nPress = to quit connection\n\n\n");
-					char input[150];
-					char resultant[150];
-					char *rmvSpace;
-					while (1) {
-						memset(input, 0, sizeof(input));
-						printf("\nOperation: ");
-						gets(input);
-						rmvSpace = removeLeadingSpaces(input);
-						//"=" IS THE QUIT COMMAND
-						if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
-							send(c_socket, rmvSpace, sizeof(char[150]), 0);
-							closesocket(c_socket);
-							clearWinSock();
-							return 1;
-						} else {
-							if (send(c_socket, rmvSpace, sizeof(char[150]), 0)
-									!= -1) {
-								//CLIENTS WAITS FOR AN ANSWER
-								if (recv(c_socket, resultant, sizeof(char[150]),
-										0) != -1) {
-									printf("Result: %s\n", resultant);
-								} else {
-									errorHandler("Failed to receive.\n");
-									closesocket(c_socket);
-									clearWinSock();
-									return -1;
-								}
+				printf("To make an operation, insert parameter in this order:\n*operator(+,-,*,/)* "
+						"*integer_value_1* *integer_value 2*\n ex: + 25 13\nPress = to quit connection\n\n\n");
+				char input[MAXECHO];
+				char resultant[MAXECHO];
+				char *rmvSpace;
+				while (1) {
+					memset(input, 0, sizeof(input));
+					printf("\nOperation: ");
+					gets(input);
+					rmvSpace = removeLeadingSpaces(input);
+					//"=" IS THE QUIT COMMAND
+					if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
+						//send(c_socket, rmvSpace, sizeof(char[MAXECHO]), 0);
+						closesocket(c_socket);
+						clearWinSock();
+						return 1;
+					} else {
+						// ECHOMAX CHECK
+						if (sendto(c_socket, rmvSpace, sizeof(char[MAXECHO]), 0, (struct sockaddr *) &sad, sizeof(sad))
+								== sizeof(char[MAXECHO])) {
+							//CLIENTS WAITS FOR AN ANSWER
+							recvfrom(c_socket, resultant, sizeof(resultant), 0, (struct sockaddr *) &sadCheck, &sadCheckLen);
+							if (sad.sin_addr.s_addr == sadCheck.sin_addr.s_addr) {
+								printf("Result: %s\n", resultant);
 							} else {
-								errorHandler("Failed to send.\n");
+								errorHandler("Failed to receive.\n");
+								system("PAUSE");
+
 								closesocket(c_socket);
 								clearWinSock();
 								return -1;
 							}
+						} else {
+							errorHandler("Failed to send.\n");
+							system("PAUSE");
+
+							closesocket(c_socket);
+							clearWinSock();
+							return -1;
 						}
-						memset(rmvSpace, 0, sizeof(char[150]));
 					}
-				} else {
-					errorHandler("Failed to connect.\n");
-					closesocket(c_socket);
-					clearWinSock();
-					return -1;
+					memset(rmvSpace, 0, sizeof(char[MAXECHO]));
 				}
 			} else {
 				errorHandler("Socket Build failed.\n");
@@ -111,6 +109,7 @@ int main(int argc, char *argv[]) {
 		clearWinSock();
 		return -1;
 	}
+	system("PAUSE");
 }
 
 void errorHandler(char *errorMessage) {
@@ -137,7 +136,7 @@ void removeExtraSpaces(char *str) {
 //This function would reduce this kind of input "      + 26 15"
 //into "+ 26 15"
 char* removeLeadingSpaces(char *str) {
-	static char str1[150];
+	static char str1[MAXECHO];
 	int count = 0, j, k;
 	while (str[count] == ' ') {
 		count++;
@@ -196,7 +195,7 @@ int argumentsCheck(int argc, char **argv) {
 
 //Population of socket structure: IP and PORT
 void setAddresses(struct sockaddr_in *sad, int port, char *ip) {
-	sad->sin_addr.s_addr = inet_addr(ip);
+	sad->sin_addr.s_addr = inet_addr(translateIntoInt(ip));
 	sad->sin_port = htons(port);
 }
 
@@ -223,5 +222,28 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 		memset(&cad, 0, sizeof(cad));
 	}
 	return cad;
+}
+
+char* translateIntoInt(char *input) {
+
+	struct hostent *host;
+	host = gethostbyname(input);
+	if (host == NULL) {
+		errorHandler("gethostbyname() failed.\n");
+		exit(EXIT_FAILURE);
+	} else {
+		struct in_addr *ina = (struct in_addr*) host->h_addr_list[0];
+		return inet_ntoa(*ina);
+	}
+}
+
+char* translateIntoString(char *input) {
+	struct in_addr addr;
+	struct hostent *host;
+
+	addr.s_addr = inet_addr(input);
+	host = gethostbyaddr((char*) &addr, 4, AF_INET);
+	char *canonical_name = host->h_name;
+	return canonical_name;
 }
 
