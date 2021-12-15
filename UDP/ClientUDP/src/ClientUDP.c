@@ -150,52 +150,6 @@ char* removeLeadingSpaces(char *str) {
 	return str1;
 }
 
-//Checks if custom IP and PORT are valid
-int argumentsCheck(int argc, char **argv) {
-	if (argc == 2) {
-		char canonical[95];
-		char pNumber[5];
-		splitString(argv[1], canonical, pNumber);
-		char ip[16];
-		strcpy(ip, translateIntoInt(canonical));
-		int pointNumber = 0;
-		int i = 0;
-		while (ip[i] != '\0') {
-			if (ip[i] == '.') {
-				if (pointNumber == 1) {
-					if (ip[i - 1] == '0' && ip[i - 2] == '.' && ip[i + 1] == '0'
-							&& ip[i + 3] == '0') {
-						return 0;
-					}
-				}
-				pointNumber++;
-			}
-			i++;
-		}
-		if (pointNumber == 3) {
-			int i = 0;
-			while (pNumber[i] != '\0') {
-				if (!isdigit(pNumber[i]) || pNumber[i] == '.'
-						|| pNumber[i] == ',') {
-					return 0;
-				}
-				i++;
-			}
-			if (atoi(pNumber) >= 0 && atoi(pNumber) <= 65535) {
-				return 1;
-			} else {
-				return 0;
-			}
-
-		} else {
-			return 0;
-		}
-	} else if (argc == 1) {
-		return 1;
-	}
-	return 0;
-}
-
 //Population of socket structure: IP and PORT
 void setAddresses(struct sockaddr_in *sad, int port, char *ip) {
 	if (isdigit(ip[0]) && (isdigit(ip[1]) || ip[1] == '.')

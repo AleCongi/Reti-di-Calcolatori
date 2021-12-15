@@ -19,7 +19,6 @@ void ftoa(float, char*, int);
 int legitOperator(char);
 int legitInput(char*);
 int numericCheck(char*, char*);
-int argumentsCheck(int, char**);
 
 void populateValues(char*, char*, char*);
 

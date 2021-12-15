@@ -14,8 +14,6 @@ void clearWinSock();
 void removeExtraSpaces(char*);
 char* removeLeadingSpaces(char*);
 
-int argumentsCheck(int, char**);
-
 //Common functions
 void setAddresses(struct sockaddr_in *, int, char*);
 struct sockaddr_in sockBuild(int *, int, char **);
