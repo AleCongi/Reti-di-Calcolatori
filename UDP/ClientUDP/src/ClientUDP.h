@@ -23,4 +23,6 @@ struct sockaddr_in sockBuild(int *, int, char **);
 char* translateIntoString(char *);
 char* translateIntoInt(char *);
 
+int splitString(char *, char *, char *);
+
 #endif /* CLIENTUDP_H_ */

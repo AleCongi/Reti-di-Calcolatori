@@ -36,5 +36,6 @@ struct sockaddr_in sockBuild(int *, int, char **);
 char* translateIntoString(char *);
 char* translateIntoInt(char *);
 
+int splitString(char *, char *, char *);
 
 #endif /* SERVERUDP_H_ */

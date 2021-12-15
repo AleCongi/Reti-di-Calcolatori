@@ -45,7 +45,6 @@ int main(int argc, char *argv[]) {
 	char ERROR_PRINT[MAXECHO] = { "Unable to calculate." };
 	my_socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (my_socket != -1) {
-		if (argumentsCheck(argc, argv)) {
 			//ADDRESSING SOCKET
 			struct sockaddr_in sad = sockBuild(&check, argc, argv);
 			if (check) {
@@ -86,7 +85,8 @@ int main(int argc, char *argv[]) {
 							operator[0] = input[0];
 							operator[1] = '\0';
 							//INPUT INTEGRITY CONTROL
-							if (legitOperator(operator[0]) && legitInput(input)) {
+							if (legitOperator(operator[0])
+									&& legitInput(input)) {
 								//INPUT TOKENIZATION
 								populateValues(input, first, second);
 								//NUMERIC CONTROL
@@ -139,11 +139,6 @@ int main(int argc, char *argv[]) {
 			clearWinSock();
 			return -1;
 		}
-	} else {
-		errorHandler("Socket Creation failed.\n");
-		clearWinSock();
-		return -1;
-	}
 }
 
 void errorHandler(char *errorMessage) {
@@ -241,16 +236,21 @@ int numericCheck(char *first, char *second) {
 	return checkDigit;
 }
 
-//Checks if custom IP are valid
+//Checks if custom IP and PORT are valid
 int argumentsCheck(int argc, char **argv) {
-	if (argc > 1) {
+	if (argc == 2) {
+		char canonical[95];
+		char pNumber[5];
+		splitString(argv[1], canonical, pNumber);
+		char ip[16];
+		strcpy(ip, translateIntoInt(canonical));
 		int pointNumber = 0;
 		int i = 0;
-		while (argv[1][i] |= '\0') {
-			if (argv[1][i] == '.') {
+		while (ip[i] != '\0') {
+			if (ip[i] == '.') {
 				if (pointNumber == 1) {
-					if (argv[1][i - 1] == '0' && argv[1][i - 2] == '.'
-							&& argv[1][i + 1] == '0' && argv[1][i + 3] == '0') {
+					if (ip[i - 1] == '0' && ip[i - 2] == '.' && ip[i + 1] == '0'
+							&& ip[i + 3] == '0') {
 						return 0;
 					}
 				}
@@ -259,23 +259,20 @@ int argumentsCheck(int argc, char **argv) {
 			i++;
 		}
 		if (pointNumber == 3) {
-			if (argc == 2) {
-				return 1;
-			} else if (argc == 3) {
-				int i = 0;
-				while (argv[2][i] != '\0') {
-					if (!isdigit(argv[2][i]) || argv[2][i] == '.'
-							|| argv[2][i] == ',') {
-						return 0;
-					}
-					i++;
-				}
-				if (atoi(argv[2]) >= 0 && atoi(argv[2]) <= 65535) {
-					return 1;
-				} else {
+			int i = 0;
+			while (pNumber[i] != '\0') {
+				if (!isdigit(pNumber[i]) || pNumber[i] == '.'
+						|| pNumber[i] == ',') {
 					return 0;
 				}
+				i++;
 			}
+			if (atoi(pNumber) >= 0 && atoi(pNumber) <= 65535) {
+				return 1;
+			} else {
+				return 0;
+			}
+
 		} else {
 			return 0;
 		}
@@ -367,36 +364,46 @@ char* calculation(char *operator, char *first, char *second) {
 
 //Population of socket structure: IP and PORT
 void setAddresses(struct sockaddr_in *sad, int port, char *ip) {
-	sad->sin_addr.s_addr = inet_addr(translateIntoInt(ip));
+	if (isdigit(ip[0]) && (isdigit(ip[1]) || ip[1] == '.')
+			&& (isdigit(ip[2]) || ip[2] == '.')
+			&& (isdigit(ip[3]) || ip[3] == '.')) {
+		sad->sin_addr.s_addr = inet_addr(ip);
+	} else {
+		sad->sin_addr.s_addr = inet_addr(translateIntoInt(ip));
+	}
 	sad->sin_port = htons(port);
 }
 
 //If arguments were passed during Server Run,
 //the function inserts argvs in socket structure
 struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
-	struct sockaddr_in sad;
-	memset(&sad, 0, sizeof(sad));
-	sad.sin_family = AF_INET;
+	struct sockaddr_in cad;
+	memset(&cad, 0, sizeof(cad));
+	cad.sin_family = AF_INET;
 	if (argc == 1) {
-		//TRANSLATE PROTOIP
-		setAddresses(&sad, PROTOPORT, IP);
+		setAddresses(&cad, PROTOPORT, IP);
 	} else if (argc == 2) {
-		//STRIP AND TRANSLATE
-		setAddresses(&sad, PROTOPORT, argv[1]);
-	} else if (argc == 3) {
-		//DELETE
-		int port = atoi(argv[2]);
-		if (port > 0) {
-			setAddresses(&sad, port, argv[1]);
+		char line[100];
+		char canonical[95];
+		char pNumber[5];
+		strcpy(line, argv[1]);
+		if (splitString(line, canonical, pNumber)) {
+			int port = atoi(pNumber);
+			if (port < 65536 && port > 0) {
+				setAddresses(&cad, port, canonical);
+			} else {
+				*ok = 0;
+				memset(&cad, 0, sizeof(cad));
+			}
 		} else {
-			errorHandler("Bad port number.\n");
 			*ok = 0;
+			memset(&cad, 0, sizeof(cad));
 		}
 	} else {
 		*ok = 0;
-		memset(&sad, 0, sizeof(sad));
+		memset(&cad, 0, sizeof(cad));
 	}
-	return sad;
+	return cad;
 }
 
 char* translateIntoInt(char *input) {
@@ -420,5 +427,31 @@ char* translateIntoString(char *input) {
 	host = gethostbyaddr((char*) &addr, 4, AF_INET);
 	char *canonical_name = host->h_name;
 	return canonical_name;
+}
+
+int splitString(char *input, char *first, char *second) {
+	int ok = 0;
+	int i = 0;
+	while (input[i] != '\0') {
+		if (input[i] == ':' && (i != 0) && input[i + 1] != '\0') {
+			ok = 1;
+		}
+		i++;
+	}
+	i = 0;
+	if (ok) {
+		while (input[i] != ':') {
+			first[i] = input[i];
+			i++;
+		}
+		i++;
+		int j = 0;
+		while (input[i] != '\0') {
+			second[j] = input[i];
+			i++;
+			j++;
+		}
+	}
+	return ok;
 }
 
