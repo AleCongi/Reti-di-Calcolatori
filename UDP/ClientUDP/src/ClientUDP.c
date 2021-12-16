@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 		if (check) {
 			char input[MAXECHO];
 			char resultant[MAXECHO];
-			char *rmvSpace = malloc(sizeof(char[MAXECHO]));
+			char *rmvSpace;
 			char safeString[MAXECHO];
 			while (1) {
 				memset(input, 0, sizeof(input));
@@ -65,12 +65,10 @@ int main(int argc, char *argv[]) {
 				rmvSpace = removeLeadingSpaces(input);
 				//"=" IS THE QUIT COMMAND
 				if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
-					//send(c_socket, rmvSpace, sizeof(char[MAXECHO]), 0);
 					closesocket(c_socket);
 					clearWinSock();
 					return 1;
 				} else {
-					// ECHOMAX CHECK
 					strcpy(safeString, rmvSpace);
 					if (sendto(c_socket, safeString, sizeof(safeString), 0,
 							(struct sockaddr*) &sad, sizeof(sad))
@@ -80,7 +78,11 @@ int main(int argc, char *argv[]) {
 								(struct sockaddr*) &sadCheck, &sadCheckLen);
 						if (sad.sin_addr.s_addr == sadCheck.sin_addr.s_addr) {
 							system("cls");
-							printf("\n\n\n\t%s\n\n\n", resultant);
+							printf(
+									"\n\n\nResult received from server %s, ip %s: %s\n\n\n",
+									translateIntoString(
+											inet_ntoa(sad.sin_addr)),
+									inet_ntoa(sad.sin_addr), resultant);
 							system("PAUSE");
 						} else {
 							errorHandler("Failed to receive.\n");
@@ -92,7 +94,6 @@ int main(int argc, char *argv[]) {
 					} else {
 						errorHandler("Failed to send.\n");
 						system("PAUSE");
-
 						closesocket(c_socket);
 						clearWinSock();
 						return -1;
@@ -195,11 +196,11 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 }
 
 char* translateIntoInt(char *input) {
-
 	struct hostent *host;
 	host = gethostbyname(input);
+
 	if (host == NULL) {
-		errorHandler("gethostbyname() failed.\n");
+		errorHandler("Unavailable host.\n");
 		exit(EXIT_FAILURE);
 	} else {
 		struct in_addr *ina = (struct in_addr*) host->h_addr_list[0];

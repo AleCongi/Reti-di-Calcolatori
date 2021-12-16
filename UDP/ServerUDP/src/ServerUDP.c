@@ -45,57 +45,48 @@ int main(int argc, char *argv[]) {
 	char ERROR_PRINT[MAXECHO] = { "Unable to calculate." };
 	my_socket = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (my_socket != -1) {
-			//ADDRESSING SOCKET
-			struct sockaddr_in sad = sockBuild(&check, argc, argv);
-			if (check) {
-				if (bind(my_socket, (struct sockaddr*) &sad, sizeof(sad))
-						== 0) {
-					//ACCEPTING NEW CONNECTION
-					struct sockaddr_in cad; //structure for the client address
-					int client_len; //the size of the client address
-					int package = 0;
-					client_len = sizeof(cad); //set the size of the client address
+		//ADDRESSING SOCKET
+		struct sockaddr_in sad = sockBuild(&check, argc, argv);
+		if (check) {
+			if (bind(my_socket, (struct sockaddr*) &sad, sizeof(sad)) == 0) {
+				struct sockaddr_in cad; //structure for the client address
+				int client_len; //the size of the client address
+				int package = 0;
+				client_len = sizeof(cad); //set the size of the client address
 
-					char input[MAXECHO]; //input string received from client
-					char operator[2]; //assumes the character of the operation needed (+, -, *, /)
-					char first[127]; //first value
-					char second[127]; //second value
-					char *finalRes = malloc(sizeof(char[MAXECHO])); //final result, variable we want to send back to client
+				char input[MAXECHO]; //input string received from client
+				char operator[2]; //assumes the character of the operation needed (+, -, *, /)
+				char first[127]; //first value
+				char second[127]; //second value
+				char *finalRes; //final result, variable we want to send back to client
 
-					while (1) {
-						printf("Waiting for a client to connect...\n");
-						memset(input, 0, sizeof(char[MAXECHO]));
-						memset(first, 0, sizeof(char[127]));
-						memset(second, 0, sizeof(char[127]));
-						package = 0;
-						package = recvfrom(my_socket, input, sizeof(input), 0,
-								(struct sockaddr*) &cad, &client_len);
-						printf(
-								"Requested operation \'%s\' from client %s, ip %s\n",
-								input,
-								translateIntoString(inet_ntoa(cad.sin_addr)),
-								inet_ntoa(cad.sin_addr));
-
-						//QUIT REQUEST
-						if ((input[0] == '=')
-								&& ((input[1] == '\0')
-										|| (isspace(input[1])
-												&& input[2] == '\0'))) {
-						} else {
-							operator[0] = input[0];
-							operator[1] = '\0';
-							//INPUT INTEGRITY CONTROL
-							if (legitOperator(operator[0])
-									&& legitInput(input)) {
-								//INPUT TOKENIZATION
-								populateValues(input, first, second);
-								//NUMERIC CONTROL
-								if (numericCheck(first, second)) {
-									finalRes = calculation(operator, first,
-											second);
+				while (1) {
+					printf("Waiting for a client to connect...\n");
+					memset(input, 0, sizeof(char[MAXECHO]));
+					memset(first, 0, sizeof(char[127]));
+					memset(second, 0, sizeof(char[127]));
+					package = 0;
+					package = recvfrom(my_socket, input, sizeof(input), 0,
+							(struct sockaddr*) &cad, &client_len);
+					printf("Requested operation \'%s\' from client %s, ip %s\n",
+							input, translateIntoString(inet_ntoa(cad.sin_addr)),
+							inet_ntoa(cad.sin_addr));
+					//QUIT REQUEST
+					if ((input[0] == '=')
+							&& ((input[1] == '\0')
+									|| (isspace(input[1]) && input[2] == '\0'))) {
+					} else {
+						operator[0] = input[0];
+						operator[1] = '\0';
+						//INPUT INTEGRITY CONTROL
+						if (legitOperator(operator[0]) && legitInput(input)) {
+							//INPUT TOKENIZATION
+							populateValues(input, first, second);
+							//NUMERIC CONTROL
+							if (numericCheck(first, second)) {
+								finalRes = calculation(operator, first, second);
+								if (strlen(finalRes) < MAXECHO) {
 									strcpy(input, finalRes);
-									//MODIFICARE FINEL RES COME SEGUE: VAL1 OP VAL2 = RES
-
 									//SENDING RESULT
 									if (sendto(my_socket, input, sizeof(input),
 											0, (struct sockaddr*) &cad,
@@ -103,9 +94,9 @@ int main(int argc, char *argv[]) {
 										errorHandler("Failed to send.\n");
 									}
 								} else {
-									//SENDING ERROR BACK TO CLIENT
-									if (sendto(my_socket, ERROR_PRINT,
-											sizeof(ERROR_PRINT), 0,
+									if (sendto(my_socket,
+											"Package is too large to be sent.",
+											sizeof(char[255]), 0,
 											(struct sockaddr*) &cad, client_len)
 											!= package) {
 										errorHandler("Failed to send.\n");
@@ -120,25 +111,34 @@ int main(int argc, char *argv[]) {
 									errorHandler("Failed to send.\n");
 								}
 							}
-							operator[0] = 0;
+						} else {
+							//SENDING ERROR BACK TO CLIENT
+							if (sendto(my_socket, ERROR_PRINT,
+									sizeof(ERROR_PRINT), 0,
+									(struct sockaddr*) &cad, client_len)
+									!= package) {
+								errorHandler("Failed to send.\n");
+							}
 						}
+						operator[0] = 0;
 					}
-				} else {
-					errorHandler("bind() failed.\n");
-					closesocket(my_socket);
-					clearWinSock();
-					return -1;
 				}
 			} else {
-				errorHandler("Socket Build failed.\n");
+				errorHandler("bind() failed.\n");
+				closesocket(my_socket);
 				clearWinSock();
 				return -1;
 			}
 		} else {
-			errorHandler("Invalid arguments.\n");
+			errorHandler("Socket Build failed.\n");
 			clearWinSock();
 			return -1;
 		}
+	} else {
+		errorHandler("Invalid arguments.\n");
+		clearWinSock();
+		return -1;
+	}
 }
 
 void errorHandler(char *errorMessage) {
@@ -190,17 +190,17 @@ int legitInput(char *input) {
 			}
 			//Are there other unacceptable values?
 			if (isspace(input[i]) && input[i + 1] != '\0') {
-				//errorHandler("Unavailable operation: there are more than two values\n");
+				errorHandler("Unavailable operation: there are more than two values\n");
 				return 0;
 			} else {
 				return 1;
 			}
 		} else {
-			//errorHandler("Unavailable operation: no second values found.\n");
+			errorHandler("Unavailable operation: no second values found.\n");
 			return 0;
 		}
 	} else {
-		//errorHandler("Unavailable operation: no values found.\n");
+		errorHandler("Unavailable operation: no values found.\n");
 		return 0;
 	}
 }
@@ -228,10 +228,10 @@ int numericCheck(char *first, char *second) {
 			i++;
 		}
 		if (checkDigit == 0) {
-			//errorHandler("Unacceptable second value.\n");
+			errorHandler("Unacceptable second value.\n");
 		}
 	} else {
-		//errorHandler("Unacceptable first value.\n");
+		errorHandler("Unacceptable first value.\n");
 	}
 	return checkDigit;
 }
