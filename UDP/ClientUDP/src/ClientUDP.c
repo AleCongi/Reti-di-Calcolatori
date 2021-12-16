@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <unistd.h>
 #include "ClientUDP.h"
 
 #define PROTOPORT 48000 // default protocol port number
@@ -65,6 +66,9 @@ int main(int argc, char *argv[]) {
 				rmvSpace = removeLeadingSpaces(input);
 				//"=" IS THE QUIT COMMAND
 				if ((rmvSpace[0] == '=') && (rmvSpace[1] == '\0')) {
+					system("cls");
+					printf("\n\n\n\n\tbye bye\t :)");
+					sleep(1);
 					closesocket(c_socket);
 					clearWinSock();
 					return 1;
