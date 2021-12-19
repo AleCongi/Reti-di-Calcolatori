@@ -104,6 +104,7 @@ int main(int argc, char *argv[]) {
 					}
 				}
 				memset(rmvSpace, 0, sizeof(char[MAXECHO]));
+				memset(safeString, 0, sizeof(char[MAXECHO]));
 			}
 		} else {
 			errorHandler("Socket Build failed.\n");
@@ -177,8 +178,8 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 		setAddresses(&cad, PROTOPORT, IP);
 	} else if (argc == 2) {
 		char line[100];
-		char canonical[95];
-		char pNumber[5];
+		char canonical[90];
+		char pNumber[10];
 		strcpy(line, argv[1]);
 		if (splitString(line, canonical, pNumber)) {
 			int port = atoi(pNumber);
@@ -187,14 +188,17 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 			} else {
 				*ok = 0;
 				memset(&cad, 0, sizeof(cad));
+				errorHandler("Bad port number\n");
 			}
 		} else {
 			*ok = 0;
 			memset(&cad, 0, sizeof(cad));
+			errorHandler("Invalid arguments\n");
 		}
 	} else {
 		*ok = 0;
 		memset(&cad, 0, sizeof(cad));
+		errorHandler("Invalid arguments\n");
 	}
 	return cad;
 }

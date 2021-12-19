@@ -190,7 +190,8 @@ int legitInput(char *input) {
 			}
 			//Are there other unacceptable values?
 			if (isspace(input[i]) && input[i + 1] != '\0') {
-				errorHandler("Unavailable operation: there are more than two values\n");
+				errorHandler(
+						"Unavailable operation: there are more than two values\n");
 				return 0;
 			} else {
 				return 1;
@@ -338,8 +339,8 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 		setAddresses(&cad, PROTOPORT, IP);
 	} else if (argc == 2) {
 		char line[100];
-		char canonical[95];
-		char pNumber[5];
+		char canonical[90];
+		char pNumber[10];
 		strcpy(line, argv[1]);
 		if (splitString(line, canonical, pNumber)) {
 			int port = atoi(pNumber);
@@ -348,22 +349,25 @@ struct sockaddr_in sockBuild(int *ok, int argc, char *argv[]) {
 			} else {
 				*ok = 0;
 				memset(&cad, 0, sizeof(cad));
+				errorHandler("Bad port number\n");
 			}
 		} else {
 			*ok = 0;
 			memset(&cad, 0, sizeof(cad));
+			errorHandler("Invalid arguments\n");
 		}
 	} else {
 		*ok = 0;
 		memset(&cad, 0, sizeof(cad));
+		errorHandler("Invalid arguments\n");
 	}
 	return cad;
 }
 
 char* translateIntoInt(char *input) {
-
 	struct hostent *host;
 	host = gethostbyname(input);
+
 	if (host == NULL) {
 		errorHandler("gethostbyname() failed.\n");
 		exit(EXIT_FAILURE);
@@ -408,4 +412,3 @@ int splitString(char *input, char *first, char *second) {
 	}
 	return ok;
 }
-
